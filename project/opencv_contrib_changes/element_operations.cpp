@@ -41,7 +41,6 @@
 //M*/
 
 #include "precomp.hpp"
-#include <iostream>
 
 using namespace cv;
 using namespace cv::cuda;
@@ -193,8 +192,9 @@ void mulMat_8uc4_32f(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Stream
 void mulMat_16sc4_32f(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Stream& stream);
 
 void mulScalar(const GpuMat& src, cv::Scalar val, bool, GpuMat& dst, const GpuMat& mask, double scale, Stream& stream, int);
-void mulMatLite(float* src1, float* src2, float* dst, size_t arraySize);
-
+//------- jwootan cuda experiment ----------------------
+void mulMatExperiment(float* src1, float* src2, float* dst, size_t arraySize, CUDA_MEM_TYPE memType);
+//------------------------------------------------------
 void cv::cuda::multiply(InputArray _src1, InputArray _src2, OutputArray _dst, double scale, int dtype, Stream& stream)
 {
     if (_src1.type() == CV_8UC4 && _src2.type() == CV_32FC1)
@@ -228,17 +228,17 @@ void cv::cuda::multiply(InputArray _src1, InputArray _src2, OutputArray _dst, do
         arithm_op(_src1, _src2, _dst, GpuMat(), scale, dtype, stream, mulMat, mulScalar);
     }
 }
-
-void cv::cuda::multiply_lite(Mat _src1, Mat _src2, Mat _dst){
+//------- jwootan cuda experiment ----------------------
+void cv::cuda::multiply_experiment(Mat _src1, Mat _src2, Mat _dst, CUDA_MEM_TYPE memType){
     float* src1Data = (float*) _src1.data;
     float* src2Data = (float*) _src2.data;
     float* dstData = (float*) _dst.data;
 
-    mulMatLite(src1Data, src2Data, dstData, _src1.step[0]*_src1.rows);
+    mulMatExperiment(src1Data, src2Data, dstData, _src1.step[0]*_src1.rows, memType);
 
     std::memcpy(_dst.data, dstData, _src1.step[0]*_src1.rows);
 }
-
+//-----------------------------------------------------
 
 ////////////////////////////////////////////////////////////////////////
 // divide
@@ -302,29 +302,23 @@ void cmpMat(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat&, 
 
 void cmpScalar(const GpuMat& src, Scalar val, bool inv, GpuMat& dst, const GpuMat&, double, Stream& stream, int cmpop);
 
-void cmpScalarEQ(char* src, int scalar, char* dst, int arraySize);
-
 void cv::cuda::compare(InputArray src1, InputArray src2, OutputArray dst, int cmpop, Stream& stream)
 {
     arithm_op(src1, src2, dst, noArray(), 1.0, CV_8U, stream, cmpMat, cmpScalar, cmpop);
 }
+//------- jwootan cuda experiment ----------------------
+void cmpScalarEQ(char* src, int scalar, char* dst, int arraySize);
 
-void cv::cuda::compareEQ(Mat src, int scalar, Mat dst)
+void cv::cuda::compareEQ(Mat src, int scalar, Mat dst, CUDA_MEM_TYPE memType)
 {
     char* srcData = (char*) src.data;
     char* dstData = (char*) dst.data;
 
     cmpScalarEQ(srcData, scalar, dstData, src.step[0]*src.rows);
 
-    for(int i = 0; i < dst.rows; i++){
-      for(int j = 0; j < dst.cols; j++){
-        std::cout << (unsigned int) dstData[i*j+j] << " ";
-      }  
-      std::cout << std::endl;
-    }
-
     std::memcpy(dst.data, dstData, src.step[0]*src.rows);
 }
+//------- ------------------------- ----------------------
 
 //////////////////////////////////////////////////////////////////////////////
 // Binary bitwise logical operations
@@ -343,8 +337,6 @@ void bitMat(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& m
 
 void bitScalar(const GpuMat& src, cv::Scalar value, bool, GpuMat& dst, const GpuMat& mask, double, Stream& stream, int op);
 
-void bitwiseAndLite(uchar* src1, uchar* src2, uchar* dst, size_t arraySize);
-
 void cv::cuda::bitwise_or(InputArray src1, InputArray src2, OutputArray dst, InputArray mask, Stream& stream)
 {
     arithm_op(src1, src2, dst, mask, 1.0, -1, stream, bitMat, bitScalar, BIT_OP_OR);
@@ -355,15 +347,19 @@ void cv::cuda::bitwise_and(InputArray src1, InputArray src2, OutputArray dst, In
     arithm_op(src1, src2, dst, mask, 1.0, -1, stream, bitMat, bitScalar, BIT_OP_AND);
 }
 
-void cv::cuda::bitwise_and_lite(Mat _src1, Mat _src2, Mat _dst){
+//------- jwootan cuda experiment ----------------------
+void bitwiseAndExperiment(uchar* src1, uchar* src2, uchar* dst, size_t arraySize, CUDA_MEM_TYPE memType);
+
+void cv::cuda::bitwise_and_experiment(Mat _src1, Mat _src2, Mat _dst, CUDA_MEM_TYPE memType){
     uchar* src1Data = (uchar*) _src1.data;
     uchar* src2Data = (uchar*) _src2.data;
     uchar* dstData = (uchar*) _dst.data;
 
-    bitwiseAndLite(src1Data, src2Data, dstData, _src1.step[0]*_src1.rows);
+    bitwiseAndExperiment(src1Data, src2Data, dstData, _src1.step[0]*_src1.rows, memType);
 
     std::memcpy(_dst.data, dstData, _src1.step[0]*_src1.rows);
 }
+//-----------------------------------------------------
 
 void cv::cuda::bitwise_xor(InputArray src1, InputArray src2, OutputArray dst, InputArray mask, Stream& stream)
 {

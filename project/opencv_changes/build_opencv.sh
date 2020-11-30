@@ -1,0 +1,20 @@
+#!/bin/bash
+cmake -DCMAKE_BUILD_TYPE=RELEASE \
+  -DCMAKE_INSTALL_PREFIX=/usr/local \
+  -DOPENCV_EXTRA_MODULES_PATH=../../opencv_contrib/modules \
+  -DINSTALL_C_EXAMPLES=OFF \
+  -DINSTALL_PYTHON_EXAMPLES=ON \
+  -DBUILD_EXAMPLES=ON \
+  -DPYTHON_DEFAULT_EXECUTABLE=$(which python3) \
+  -DPYTHON3_EXECUTABLE=$(which python3) \
+  -DPYTHON_INCLUDE_DIR=$(python3 -c "from distutils.sysconfig import get_python_inc; print(get_python_inc())") \
+  -DPYTHON_INCLUDE_DIR2=$(python3 -c "from os.path import dirname; from distutils.sysconfig import get_config_h_filename; print(dirname(get_config_h_filename()))") \
+  -DPYTHON_LIBRARY=$(python3 -c "from distutils.sysconfig import get_config_var;from os.path import dirname,join ; print(join(dirname(get_config_var('LIBPC')),get_config_var('LDLIBRARY')))") \
+  -DPYTHON3_NUMPY_INCLUDE_DIRS=$(python3 -c "import numpy; print(numpy.get_include())") \
+  -DPYTHON3_PACKAGES_PATH=$(python3 -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())") \
+  -DWITH_CUDA=ON \
+  -DENABLE_FAST_MATH=1 \
+  -DCUDA_FAST_MATH=1 \
+  -DWITH_CUBLAS=1 \
+  -DINSTALL_PYTHON_EXAMPLES=ON \
+  -DBUILD_EXAMPLES=ON  ..

@@ -558,7 +558,6 @@ void BlocksCompensator::apply(int index, Point /*corner*/, InputOutputArray _ima
     CV_INSTRUMENT_REGION();
 
     CV_Assert(_image.type() == CV_8UC3);
-    //std::cout << "Normal Blocks application" << std::endl;
 
     UMat u_gain_map;
     if (gain_maps_.at(index).size() == _image.size())
@@ -574,18 +573,17 @@ void BlocksCompensator::apply(int index, Point /*corner*/, InputOutputArray _ima
         gains_channels.push_back(u_gain_map);
         merge(gains_channels, u_gain_map);
     }
-
+    //------- jwootan cuda experiment ----------------------
     if (cuda::getCudaEnabledDeviceCount() > 0){
         cv::Mat imgMat = _image.getMat();
         cv::Mat gainMat = u_gain_map.getMat(ACCESS_READ);
         int originalImgType = imgMat.type();
-
         if(gainMat.type() != imgMat.type()){
             imgMat.convertTo(imgMat, gainMat.type());
-            cuda::multiply_lite(imgMat, gainMat, imgMat);
+            cuda::multiply_experiment(imgMat, gainMat, imgMat, cuda::GLOBAL);
             imgMat.convertTo(imgMat, originalImgType);
         } else {
-            cuda::multiply_lite(imgMat, gainMat, imgMat);
+            cuda::multiply_experiment(imgMat, gainMat, imgMat, cuda::REGISTER);
         }
 
         imgMat.copyTo(_image);
@@ -593,6 +591,7 @@ void BlocksCompensator::apply(int index, Point /*corner*/, InputOutputArray _ima
     else {
         multiply(_image, u_gain_map, _image, 1, _image.type());
     }
+    //-----------------------------------
 }
 
 void BlocksCompensator::getMatGains(std::vector<Mat>& umv)

@@ -55,7 +55,7 @@ using namespace cv::cudev;
 void mulMat(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat&, double scale, Stream& stream, int);
 void mulMat_8uc4_32f(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Stream& stream);
 void mulMat_16sc4_32f(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Stream& stream);
-void mulMatLite(uchar* src1, uchar* src2, uchar* dst);
+void mulMatExperiment(float* src1, float* src2, float* dst, size_t arraySize, CUDA_MEM_TYPE memType);
 
 namespace
 {
@@ -222,14 +222,23 @@ void mulMat_16sc4_32f(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Strea
     gridTransformBinary(globPtr<short4>(src1), globPtr<float>(src2), globPtr<short4>(dst), MulOpSpecial<short4>(), stream);
 }
 
-__global__ void mult_lite(int arraySize, float* src1, float* src2, float* dst){
+//------- jwootan cuda experiment ----------------------
+__global__ void mult_global(int arraySize, float* src1, float* src2, float* dst){
     for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < arraySize; i += blockDim.x * gridDim.x) 
      {
         dst[i] = src1[i] * src2[i];
      }
 }
 
-void mulMatLite(float* src1, float* src2, float* dst, size_t arraySize){
+__global__ void mult_reg(int arraySize, float* src1, float* src2, float* dst){
+    for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < arraySize; i += blockDim.x * gridDim.x) 
+     {
+        float reg = src1[i] * src2[i];
+        dst[i] = reg;
+     }
+}
+
+void mulMatExperiment(float* src1, float* src2, float* dst, size_t arraySize, cv::cuda::CUDA_MEM_TYPE memType){
     float *cudaInput1;
     float *cudaInput2;
     float *cudaOutput;
@@ -244,7 +253,14 @@ void mulMatLite(float* src1, float* src2, float* dst, size_t arraySize){
     int threadCount = 1024;
     int blocks = threadCount / 256;
 
-    mult_lite<<<blocks, threadCount>>>(arraySize/sizeof(float), cudaInput1, cudaInput2, cudaOutput);
+    switch(memType){
+        case cv::cuda::REGISTER:
+            mult_reg<<<blocks, threadCount>>>(arraySize/sizeof(float), cudaInput1, cudaInput2, cudaOutput);
+            break;
+        default:
+            mult_global<<<blocks, threadCount>>>(arraySize/sizeof(float), cudaInput1, cudaInput2, cudaOutput);
+    }
+
 
     cudaThreadSynchronize();
 
@@ -254,5 +270,6 @@ void mulMatLite(float* src1, float* src2, float* dst, size_t arraySize){
 	cudaFree(cudaInput2);
     cudaFree(cudaOutput);
 }
+//---------------------------------------- ----------------------
 
 #endif

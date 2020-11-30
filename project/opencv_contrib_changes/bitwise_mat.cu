@@ -150,7 +150,8 @@ namespace
     }
 }
 
-__global__ void and_lite(int arraySize, char* src1, char* src2, char* dst){
+//------- jwootan cuda experiment ----------------------
+__global__ void and_global(int arraySize, char* src1, char* src2, char* dst){
 
     for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < arraySize; i += blockDim.x * gridDim.x) 
      {
@@ -158,7 +159,16 @@ __global__ void and_lite(int arraySize, char* src1, char* src2, char* dst){
      }
 }
 
-void bitwiseAndLite(uchar* src1, uchar* src2, uchar* dst, size_t arraySize){
+__global__ void and_reg(int arraySize, char* src1, char* src2, char* dst){
+
+    for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < arraySize; i += blockDim.x * gridDim.x) 
+     {
+        char reg = src1[i] & src2[i];
+        dst[i] = reg;
+     }
+}
+
+void bitwiseAndExperiment(uchar* src1, uchar* src2, uchar* dst, size_t arraySize, CUDA_MEM_TYPE memType){
     char *cudaInput1;
     char *cudaInput2;
     char *cudaOutput;
@@ -173,7 +183,13 @@ void bitwiseAndLite(uchar* src1, uchar* src2, uchar* dst, size_t arraySize){
     int threadCount = 1024;
     int blocks = threadCount / 256;
 
-    and_lite<<<blocks, threadCount>>>(arraySize/sizeof(char), cudaInput1, cudaInput2, cudaOutput);
+    switch(memType){
+        case REGISTER:
+            and_reg<<<blocks, threadCount>>>(arraySize/sizeof(char), cudaInput1, cudaInput2, cudaOutput);
+            break;
+        default:
+            and_global<<<blocks, threadCount>>>(arraySize/sizeof(char), cudaInput1, cudaInput2, cudaOutput);
+    }
 
     cudaThreadSynchronize();
 
@@ -183,6 +199,7 @@ void bitwiseAndLite(uchar* src1, uchar* src2, uchar* dst, size_t arraySize){
 	cudaFree(cudaInput2);
     cudaFree(cudaOutput);
 }
+//------- ----------------------------- ----------------------
 
 void bitMat(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat& mask, double, Stream& stream, int op)
 {

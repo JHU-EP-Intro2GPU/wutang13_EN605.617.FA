@@ -42,7 +42,7 @@
 
 #include "precomp.hpp"
 #include "opencl_kernels_stitching.hpp"
-#include <iostream>
+//------- jwootan cuda experiment ----------------------
 #include "opencv2/cudaarithm.hpp"
 
 #ifdef HAVE_CUDA
@@ -127,7 +127,7 @@ void Blender::feed(InputArray _img, InputArray _mask, Point tl)
 void Blender::blend(InputOutputArray dst, InputOutputArray dst_mask)
 {
     UMat mask;
-    // Try CUDA
+    //------- jwootan cuda experiment ----------------------
     if(cuda::getCudaEnabledDeviceCount() > 0){
             cuda::GpuMat gDstmask(dst_mask_);
             cuda::GpuMat gMask(mask);
@@ -136,6 +136,7 @@ void Blender::blend(InputOutputArray dst, InputOutputArray dst_mask)
     } else {
         compare(dst_mask_, 0, mask, CMP_EQ);
     }
+    //---------------------------------
     dst_.setTo(Scalar::all(0), mask);
     dst.assign(dst_);
     dst_mask.assign(dst_mask_);

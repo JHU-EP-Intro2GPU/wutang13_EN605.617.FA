@@ -1,19 +1,19 @@
 6 Image Stitch No GPU Boost x 10
 -----------------------------
-3.85214
-2.88996
-3.89311
-3.83678
-3.69994
-3.88313
-3.65382
-3.8855
-2.79158
-3.8144
-Average Runtime: 3.62004
+3.97245
+2.9661
+3.94663
+3.87408
+3.66259
+3.95015
+4.13293
+3.6926
+2.93711
+4.13833
+Average Runtime: 3.7273
 
 
-6 Image Stitch GPU Boost (Exposure Multiplier, Compare, Bitwise_And) x 10
+6 Image Stitch GPU Boost (Exposure Multiplier, Compare, Bitwise_And GLOBAL) x 10
 -----------------------------
 4.01139
 3.06889
@@ -26,3 +26,18 @@ Average Runtime: 3.62004
 2.96612
 3.76906
 Average Runtime: 3.67659
+
+
+6 Image Stitch GPU Boost (Exposure Multiplier, Bitwise_And REGISTER) x 10
+-----------------------------
+4.29873
+3.01828
+4.06886
+3.96832
+3.94918
+3.93333
+3.97826
+3.854
+2.84976
+4.09553
+Average Runtime: 3.80142

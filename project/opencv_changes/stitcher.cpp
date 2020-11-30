@@ -147,7 +147,6 @@ Stitcher::Status Stitcher::composePanorama(InputArrayOfArrays images, OutputArra
         for (size_t i = 0; i < imgs.size(); ++i)
         {
             imgs_[i] = imgs[i];
-            //TODO Resize with CUDA
             resize(imgs[i], img, Size(), seam_scale_, seam_scale_, INTER_LINEAR_EXACT);
             seam_est_imgs_[i] = img.clone();
         }
@@ -184,6 +183,7 @@ Stitcher::Status Stitcher::composePanorama(InputArrayOfArrays images, OutputArra
         masks[i].setTo(Scalar::all(255));
     }
 
+    // Warp images and their masks
     Ptr<detail::RotationWarper> w = warper_->create(float(warped_image_scale_ * seam_work_aspect_));
     for (size_t i = 0; i < imgs_.size(); ++i)
     {
@@ -212,7 +212,6 @@ Stitcher::Status Stitcher::composePanorama(InputArrayOfArrays images, OutputArra
     std::vector<UMat> images_warped_f(imgs_.size());
     for (size_t i = 0; i < imgs_.size(); ++i)
         images_warped[i].convertTo(images_warped_f[i], CV_32F);
-    //Try cuda
     seam_finder_->find(images_warped_f, corners, masks_warped);
 
     // Release unused memory
@@ -337,15 +336,16 @@ Stitcher::Status Stitcher::composePanorama(InputArrayOfArrays images, OutputArra
         // Make sure seam mask has proper size
         dilate(masks_warped[img_idx], dilated_mask, Mat());
         resize(dilated_mask, seam_mask, mask_warped.size(), 0, 0, INTER_LINEAR_EXACT);
-
+        //------- jwootan cuda experiment ----------------------
         if(cuda::getCudaEnabledDeviceCount() > 0){
             cv::Mat seamMat = seam_mask.getMat(ACCESS_RW);
             cv::Mat maskMat = mask_warped.getMat(ACCESS_READ);
-            cuda::bitwise_and_lite(seamMat, maskMat, seamMat);
+            cuda::bitwise_and_experiment(seamMat, maskMat, seamMat, cuda::GLOBAL);
             seamMat.copyTo(seam_mask);
         } else {
             bitwise_and(seam_mask, mask_warped, mask_warped);
         }
+        //-------------------------------------------------------
         LOGLN(" other: " << ((getTickCount() - pt) / getTickFrequency()) << " sec");
 #if ENABLE_LOG
         pt = getTickCount();
@@ -380,8 +380,6 @@ Stitcher::Status Stitcher::composePanorama(InputArrayOfArrays images, OutputArra
 
     // Preliminary result is in CV_16SC3 format, but all values are in [0,255] range,
     // so convert it to avoid user confusing
-
-    // Maybe use new CUDA kernel
     result.convertTo(pano, CV_8U);
 
     return OK;

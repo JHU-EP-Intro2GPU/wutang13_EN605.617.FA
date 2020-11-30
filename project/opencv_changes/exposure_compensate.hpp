@@ -48,6 +48,7 @@
 #endif
 
 #include "opencv2/core.hpp"
+//------- jwootan cuda experiment ----------------------
 #include "opencv2/cudaarithm.hpp"
 
 namespace cv {

@@ -222,6 +222,7 @@ void cmpScalar(const GpuMat& src, cv::Scalar val, bool inv, GpuMat& dst, const G
     funcs[depth][cmpop][cn - 1](src, val, dst, stream);
 }
 
+//------- jwootan cuda experiment ----------------------
 __global__ void eq_lite(int arraySize, char* src, int scalar, char* dst){
 
     for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < arraySize; i += blockDim.x * gridDim.x) 
@@ -255,5 +256,6 @@ void cmpScalarEQ(char* src, int scalar, char* dst, int arraySize){
 	cudaFree(cudaInput);
     cudaFree(cudaOutput);
 }
+//-------------------------------------------------- ----------------------
 
 #endif
