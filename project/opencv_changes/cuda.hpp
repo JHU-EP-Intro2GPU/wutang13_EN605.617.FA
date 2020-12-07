@@ -65,6 +65,7 @@
 namespace cv { namespace cuda {
 
     //------- jwootan cuda experiment ----------------------
+    // Each of these represents a type of memory available to be used on a CUDA device
     enum CUDA_MEM_TYPE {GLOBAL, CONSTANT, REGISTER, SHARED};
     //------------------------------------------------------
 //! @addtogroup cudacore_struct

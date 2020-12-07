@@ -49,13 +49,19 @@
 #else
 
 #include "opencv2/cudev.hpp"
+// jwootan - added cublas
+#include <cublas.h>
+//---------------------------
 
 using namespace cv::cudev;
 
 void mulMat(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, const GpuMat&, double scale, Stream& stream, int);
 void mulMat_8uc4_32f(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Stream& stream);
 void mulMat_16sc4_32f(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Stream& stream);
+// jwootan - new kernels
 void mulMatExperiment(float* src1, float* src2, float* dst, size_t arraySize, CUDA_MEM_TYPE memType);
+void sgmmNaive(float* _src1, float* _src2, float* _dst, int rows, int cols);
+//----------------------------------------
 
 namespace
 {
@@ -223,6 +229,7 @@ void mulMat_16sc4_32f(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Strea
 }
 
 //------- jwootan cuda experiment ----------------------
+// Naive matrix multiplication kernel using global memory
 __global__ void mult_global(int arraySize, float* src1, float* src2, float* dst){
     for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < arraySize; i += blockDim.x * gridDim.x) 
      {
@@ -230,6 +237,7 @@ __global__ void mult_global(int arraySize, float* src1, float* src2, float* dst)
      }
 }
 
+// Naive matrix multiplication kernel using register memory
 __global__ void mult_reg(int arraySize, float* src1, float* src2, float* dst){
     for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < arraySize; i += blockDim.x * gridDim.x) 
      {
@@ -238,7 +246,8 @@ __global__ void mult_reg(int arraySize, float* src1, float* src2, float* dst){
      }
 }
 
-void mulMatExperiment(float* src1, float* src2, float* dst, size_t arraySize, cv::cuda::CUDA_MEM_TYPE memType){
+//Allocates necessery memory for CUDA kernel calls and selects desired kernel from provided parameter type
+void mulMatExperiment(float* src1, float* src2, float* dst, size_t arraySize, int rows, int cols, CUDA_MEM_TYPE memType){
     float *cudaInput1;
     float *cudaInput2;
     float *cudaOutput;
@@ -251,7 +260,7 @@ void mulMatExperiment(float* src1, float* src2, float* dst, size_t arraySize, cv
     cudaMemcpy(cudaInput2, src2, arraySize, cudaMemcpyHostToDevice); 
 
     int threadCount = 1024;
-    int blocks = threadCount / 256;
+    int blocks = threadCount / 64;
 
     switch(memType){
         case cv::cuda::REGISTER:
@@ -270,6 +279,33 @@ void mulMatExperiment(float* src1, float* src2, float* dst, size_t arraySize, cv
 	cudaFree(cudaInput2);
     cudaFree(cudaOutput);
 }
-//---------------------------------------- ----------------------
+
+//Sets required arguments and memory needed for CUBLAS sgemm
+void sgmmNaive(float* _src1, float* _src2, float* _dst, int rows, int cols){
+    cublasInit();
+    
+    float* cudaA;
+    float* cudaB;
+    float* cudaOut;
+
+    cublasAlloc(rows*cols,sizeof(float),(void**)&cudaA);
+    cublasAlloc(rows*cols,sizeof(float),(void**)&cudaB);
+    cublasAlloc(rows*cols,sizeof(float),(void**)&cudaOut);
+
+    cublasSetMatrix(rows,cols,sizeof(float),_src1,rows,cudaA,rows);
+    cublasSetMatrix(cols,rows,sizeof(float),_src2,cols,cudaB,cols);
+
+    cublasSgemm('n','n',rows,rows,cols,1,cudaA,rows,cudaB,cols,0,cudaOut,rows);
+
+    cudaThreadSynchronize();
+
+    cublasGetMatrix(rows,rows,sizeof(float),cudaOut,rows,_dst,rows);
+
+    cublasFree(cudaA);
+    cublasFree(cudaB);
+    cublasFree(cudaOut);
+    cublasShutdown();
+}
+//--------------------------------------------------------------
 
 #endif

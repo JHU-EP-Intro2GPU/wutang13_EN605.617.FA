@@ -6,37 +6,53 @@
 #include <opencv2/core/mat.hpp>
 #include <opencv2/core/utils/logger.hpp>
 #include <time.h>
+#include <string>
 
-#define TEST_RUNS 10
+#define TEST_RUNS 200
 
 int main (int argc, char* argv[])
 {
+
     cv::Mat img1 = cv::imread("images/img1.jpg");
     cv::Mat img2 = cv::imread("images/img2.jpg");
     cv::Mat img3 = cv::imread("images/img3.jpg");
-    cv::Mat img4 = cv::imread("images/img4.jpg");
-    cv::Mat img5 = cv::imread("images/img5.jpg");
-    cv::Mat img6 = cv::imread("images/img6.jpg");
 
-
-    std::vector<cv::Mat> input{img1, img2, img3,img4,img5,img6};
+    std::vector<cv::Mat> input{ img1,img2,img3};
 
     cv::Mat pano;
     cv::Ptr<cv::Stitcher> stitcher = cv::Stitcher::create();
 
     float total = 0;
 
-    for(int i = 0; i < TEST_RUNS; i++){
-        clock_t time = clock();
-        cv::Stitcher::Status status = stitcher->stitch(input, pano);
-        time = clock() - time;
-        float timeSec = ((float) time) / CLOCKS_PER_SEC;
-        std::cout << timeSec << std::endl;
-        total += timeSec;
+    std::string runType = "cpu";
+
+    /*
+        Valid runtime flags
+
+        cpu:
+        cvgpu:
+        cublas:
+        global:
+        register:
+    */
+    if(argc > 1){
+        runType = argv[1];
     }
 
-    std::cout << "Average Runtime: " << total/TEST_RUNS << std::endl;
+    for(int i = 0; i < TEST_RUNS; i++){
+        try{
+            clock_t time = clock();
+            cv::Stitcher::Status status = stitcher->stitch(input, pano, runType);
+            time = clock() - time;
+            float timeSec = ((float) time) / CLOCKS_PER_SEC;
+            std::cout << "\r Run " << i+1 << std::flush;
+            total += timeSec;
+        } catch(const std::exception& e){
+            i--; 
+        }
+    }
 
+    std::cout << "\nAverage Runtime: " << total/TEST_RUNS << std::endl;
 
     cv::imwrite("images/out.jpg", pano);
 

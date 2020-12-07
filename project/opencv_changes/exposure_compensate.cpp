@@ -553,7 +553,8 @@ UMat BlocksCompensator::getGainMap(const ChannelsCompensator& compensator, int b
     return u_gain_map;
 }
 
-void BlocksCompensator::apply(int index, Point /*corner*/, InputOutputArray _image, InputArray /*mask*/)
+//jwootan - added runType as parameter to this method
+void BlocksCompensator::apply(int index, Point /*corner*/, InputOutputArray _image, InputArray /*mask*/, std::string runType = "cpu")
 {
     CV_INSTRUMENT_REGION();
 
@@ -574,21 +575,47 @@ void BlocksCompensator::apply(int index, Point /*corner*/, InputOutputArray _ima
         merge(gains_channels, u_gain_map);
     }
     //------- jwootan cuda experiment ----------------------
-    if (cuda::getCudaEnabledDeviceCount() > 0){
+    //Check that CUDA is enabled and CPU is not the desired implementation target
+    if (cuda::getCudaEnabledDeviceCount() > 0 && runType != "cpu" ){
+        cuda::CUDA_MEM_TYPE memType;
+        if(runType == "shared"){
+           memType = cuda::SHARED;
+        } else if(runType == "register"){
+           memType = cuda::REGISTER;
+        } else {
+           memType = cuda::GLOBAL;
+        }
+        // Convert differing types to more generic Mat object
         cv::Mat imgMat = _image.getMat();
         cv::Mat gainMat = u_gain_map.getMat(ACCESS_READ);
         int originalImgType = imgMat.type();
+
+        // The gain map and the image are usually different types and must be converted
         if(gainMat.type() != imgMat.type()){
             imgMat.convertTo(imgMat, gainMat.type());
-            cuda::multiply_experiment(imgMat, gainMat, imgMat, cuda::GLOBAL);
+            if(runType == "cvgpu"){
+                //The OpenCV builtin GPU accelerated version of multiplication
+                cuda::multiply(imgMat, gainMat, imgMat);
+            } else if(runType == "cublas"){
+                //Use CUBLAS for the matrix multiplication
+                cv::Mat tmp = imgMat.clone();
+                cuda::sgmm_experiment(imgMat, gainMat, tmp);
+                imgMat.data = tmp.data;
+            } else {
+                //Use newly created kernels calculate multiplication result
+                cv::Mat tmp = imgMat.clone();
+                cuda::multiply_experiment(imgMat, gainMat, tmp, memType);
+                imgMat.data = tmp.data;
+            }
             imgMat.convertTo(imgMat, originalImgType);
         } else {
-            cuda::multiply_experiment(imgMat, gainMat, imgMat, cuda::REGISTER);
+            cuda::multiply_experiment(imgMat, gainMat, imgMat, memType);
         }
 
         imgMat.copyTo(_image);
     }
     else {
+        //Default cpu implementation used in OpenCV
         multiply(_image, u_gain_map, _image, 1, _image.type());
     }
     //-----------------------------------

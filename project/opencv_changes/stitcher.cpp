@@ -41,8 +41,10 @@
 //M*/
 
 #include "precomp.hpp"
+//jwootan - new inclusions
 #include "opencv2/cudaarithm.hpp"
 #include <iostream>
+//-------------------------
 
 namespace cv {
 
@@ -120,16 +122,16 @@ Stitcher::Status Stitcher::estimateTransform(InputArrayOfArrays images, InputArr
 }
 
 
-
-Stitcher::Status Stitcher::composePanorama(OutputArray pano)
+//jwootan - added runType parameter
+Stitcher::Status Stitcher::composePanorama(OutputArray pano, std::string runType)
 {
     CV_INSTRUMENT_REGION();
 
-    return composePanorama(std::vector<UMat>(), pano);
+    return composePanorama(std::vector<UMat>(), pano, runType);
 }
 
-
-Stitcher::Status Stitcher::composePanorama(InputArrayOfArrays images, OutputArray pano)
+//jwootan - added runType parameter
+Stitcher::Status Stitcher::composePanorama(InputArrayOfArrays images, OutputArray pano, std::string runType)
 {
     CV_INSTRUMENT_REGION();
 
@@ -322,7 +324,9 @@ Stitcher::Status Stitcher::composePanorama(InputArrayOfArrays images, OutputArra
 #endif
 
         // Compensate exposure
-        exposure_comp_->apply((int)img_idx, corners[img_idx], img_warped, mask_warped);
+        //jwootan - added runType parameter
+        exposure_comp_->apply((int)img_idx, corners[img_idx], img_warped, mask_warped, runType);
+        //---------------------------------
         LOGLN(" compensate exposure: " << ((getTickCount() - pt) / getTickFrequency()) << " sec");
 #if ENABLE_LOG
         pt = getTickCount();
@@ -336,16 +340,9 @@ Stitcher::Status Stitcher::composePanorama(InputArrayOfArrays images, OutputArra
         // Make sure seam mask has proper size
         dilate(masks_warped[img_idx], dilated_mask, Mat());
         resize(dilated_mask, seam_mask, mask_warped.size(), 0, 0, INTER_LINEAR_EXACT);
-        //------- jwootan cuda experiment ----------------------
-        if(cuda::getCudaEnabledDeviceCount() > 0){
-            cv::Mat seamMat = seam_mask.getMat(ACCESS_RW);
-            cv::Mat maskMat = mask_warped.getMat(ACCESS_READ);
-            cuda::bitwise_and_experiment(seamMat, maskMat, seamMat, cuda::GLOBAL);
-            seamMat.copyTo(seam_mask);
-        } else {
-            bitwise_and(seam_mask, mask_warped, mask_warped);
-        }
-        //-------------------------------------------------------
+
+        bitwise_and(seam_mask, mask_warped, mask_warped);
+
         LOGLN(" other: " << ((getTickCount() - pt) / getTickFrequency()) << " sec");
 #if ENABLE_LOG
         pt = getTickCount();
@@ -385,21 +382,21 @@ Stitcher::Status Stitcher::composePanorama(InputArrayOfArrays images, OutputArra
     return OK;
 }
 
-
-Stitcher::Status Stitcher::stitch(InputArrayOfArrays images, OutputArray pano)
+//jwootan - added runType parameter w/ CPU as default
+Stitcher::Status Stitcher::stitch(InputArrayOfArrays images, OutputArray pano, std::string runType = "cpu")
 {
-    return stitch(images, noArray(), pano);
+    return stitch(images, noArray(), pano, runType);
 }
 
-
-Stitcher::Status Stitcher::stitch(InputArrayOfArrays images, InputArrayOfArrays masks, OutputArray pano)
+//jwootan - added runType parameter
+Stitcher::Status Stitcher::stitch(InputArrayOfArrays images, InputArrayOfArrays masks, OutputArray pano, std::string runType)
 {
     CV_INSTRUMENT_REGION();
 
     Status status = estimateTransform(images, masks);
     if (status != OK)
         return status;
-    return composePanorama(pano);
+    return composePanorama(pano, runType);
 }
 
 

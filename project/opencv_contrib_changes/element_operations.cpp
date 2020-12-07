@@ -193,7 +193,8 @@ void mulMat_16sc4_32f(const GpuMat& src1, const GpuMat& src2, GpuMat& dst, Strea
 
 void mulScalar(const GpuMat& src, cv::Scalar val, bool, GpuMat& dst, const GpuMat& mask, double scale, Stream& stream, int);
 //------- jwootan cuda experiment ----------------------
-void mulMatExperiment(float* src1, float* src2, float* dst, size_t arraySize, CUDA_MEM_TYPE memType);
+void mulMatExperiment(float* src1, float* src2, float* dst, size_t arraySize, int rows, int cols, CUDA_MEM_TYPE memType);
+void sgmmNaive(float* _src1, float* _src2, float* _dst, int rows, int cols);
 //------------------------------------------------------
 void cv::cuda::multiply(InputArray _src1, InputArray _src2, OutputArray _dst, double scale, int dtype, Stream& stream)
 {
@@ -229,15 +230,35 @@ void cv::cuda::multiply(InputArray _src1, InputArray _src2, OutputArray _dst, do
     }
 }
 //------- jwootan cuda experiment ----------------------
+// Wrapper for GPU accelerated multiplication kernel
+// Inputs:
+//      Mat _src1, Mat _src2 -> cv::Mat objects storing the input data w/ some header metadata
+//      Mat _dst -> cv::Mat object to store the output data
+//      CUDA_MEM_TYPE memType -> flag used to select the type of memory used in the kernel
 void cv::cuda::multiply_experiment(Mat _src1, Mat _src2, Mat _dst, CUDA_MEM_TYPE memType){
     float* src1Data = (float*) _src1.data;
     float* src2Data = (float*) _src2.data;
     float* dstData = (float*) _dst.data;
 
-    mulMatExperiment(src1Data, src2Data, dstData, _src1.step[0]*_src1.rows, memType);
+    mulMatExperiment(src1Data, src2Data, dstData, _src1.step[0]*_src1.rows, _src1.rows, _src1.cols, memType);
 
     std::memcpy(_dst.data, dstData, _src1.step[0]*_src1.rows);
 }
+
+// Wrapper for GPU accelerated matrix multiplication use CUBLAS
+// Inputs:
+//      Mat _src1, Mat _src2 -> cv::Mat objects storing the input data w/ some header metadata
+//      Mat _dst -> cv::Mat object to store the output data
+void cv::cuda::sgmm_experiment(Mat _src1, Mat _src2, Mat _dst){
+    float* src1Data = (float*) _src1.data;
+    float* src2Data = (float*) _src2.data;
+    float* dstData = (float*) _dst.data;
+    
+    sgmmNaive( src1Data, src2Data, dstData, _src1.rows, _src1.cols);
+
+    std::memcpy(_dst.data, dstData, _src1.step[0]*_src1.rows);
+}
+
 //-----------------------------------------------------
 
 ////////////////////////////////////////////////////////////////////////
@@ -306,19 +327,6 @@ void cv::cuda::compare(InputArray src1, InputArray src2, OutputArray dst, int cm
 {
     arithm_op(src1, src2, dst, noArray(), 1.0, CV_8U, stream, cmpMat, cmpScalar, cmpop);
 }
-//------- jwootan cuda experiment ----------------------
-void cmpScalarEQ(char* src, int scalar, char* dst, int arraySize);
-
-void cv::cuda::compareEQ(Mat src, int scalar, Mat dst, CUDA_MEM_TYPE memType)
-{
-    char* srcData = (char*) src.data;
-    char* dstData = (char*) dst.data;
-
-    cmpScalarEQ(srcData, scalar, dstData, src.step[0]*src.rows);
-
-    std::memcpy(dst.data, dstData, src.step[0]*src.rows);
-}
-//------- ------------------------- ----------------------
 
 //////////////////////////////////////////////////////////////////////////////
 // Binary bitwise logical operations
@@ -346,20 +354,6 @@ void cv::cuda::bitwise_and(InputArray src1, InputArray src2, OutputArray dst, In
 {
     arithm_op(src1, src2, dst, mask, 1.0, -1, stream, bitMat, bitScalar, BIT_OP_AND);
 }
-
-//------- jwootan cuda experiment ----------------------
-void bitwiseAndExperiment(uchar* src1, uchar* src2, uchar* dst, size_t arraySize, CUDA_MEM_TYPE memType);
-
-void cv::cuda::bitwise_and_experiment(Mat _src1, Mat _src2, Mat _dst, CUDA_MEM_TYPE memType){
-    uchar* src1Data = (uchar*) _src1.data;
-    uchar* src2Data = (uchar*) _src2.data;
-    uchar* dstData = (uchar*) _dst.data;
-
-    bitwiseAndExperiment(src1Data, src2Data, dstData, _src1.step[0]*_src1.rows, memType);
-
-    std::memcpy(_dst.data, dstData, _src1.step[0]*_src1.rows);
-}
-//-----------------------------------------------------
 
 void cv::cuda::bitwise_xor(InputArray src1, InputArray src2, OutputArray dst, InputArray mask, Stream& stream)
 {

@@ -1,3 +1,0 @@
-/home/jwootan/picStitch/CMakeFiles/rebuild_cache.dir
-/home/jwootan/picStitch/CMakeFiles/edit_cache.dir
-/home/jwootan/picStitch/CMakeFiles/Panorama.dir

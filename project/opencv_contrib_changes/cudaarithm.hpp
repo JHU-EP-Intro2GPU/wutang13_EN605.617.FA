@@ -114,7 +114,10 @@ The depth is defined by dtype or src1 depth.
  */
 CV_EXPORTS_W void multiply(InputArray src1, InputArray src2, OutputArray dst, double scale = 1, int dtype = -1, Stream& stream = Stream::Null());
 //------- jwootan cuda experiment ----------------------
+// Implements new naive and optimized versions of multiplication
 CV_EXPORTS_W void multiply_experiment(Mat _src1, Mat _src2, Mat _dst, CUDA_MEM_TYPE memType);
+// Sets up and uses CUBLAS to do MATRIX multiplication
+CV_EXPORTS_W void sgmm_experiment(Mat _src1, Mat _src2, Mat _dst);
 //------------------------------------------------------
 
 /** @brief Computes a matrix-matrix or matrix-scalar division.
@@ -224,9 +227,6 @@ CV_EXPORTS_W void pow(InputArray src, double power, OutputArray dst, Stream& str
 @sa compare
  */
 CV_EXPORTS_W void compare(InputArray src1, InputArray src2, OutputArray dst, int cmpop, Stream& stream = Stream::Null());
-//------- jwootan cuda experiment ----------------------
-CV_EXPORTS_W void compareEQ(Mat src, int scalar, Mat dst, CUDA_MEM_TYPE memType);
-//------------------------------- ----------------------
 
 /** @brief Performs a per-element bitwise inversion.
 
@@ -259,9 +259,7 @@ destination array to be changed. The mask can be used only with single channel i
 @param stream Stream for the asynchronous version.
  */
 CV_EXPORTS_W void bitwise_and(InputArray src1, InputArray src2, OutputArray dst, InputArray mask = noArray(), Stream& stream = Stream::Null());
-//------- jwootan cuda experiment ----------------------
-CV_EXPORTS_W void bitwise_and_experiment(Mat _src1, Mat _src2, Mat _dst, CUDA_MEM_TYPE memType);
-//------------------------------------------------------
+
 /** @brief Performs a per-element bitwise exclusive or operation of two matrices (or of matrix and scalar).
 
 @param src1 First source matrix or scalar.

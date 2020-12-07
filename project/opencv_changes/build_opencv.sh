@@ -1,10 +1,13 @@
 #!/bin/bash
 cmake -DCMAKE_BUILD_TYPE=RELEASE \
   -DCMAKE_INSTALL_PREFIX=/usr/local \
+  -DBUILD_EXAMPLES=OFF \
   -DOPENCV_EXTRA_MODULES_PATH=../../opencv_contrib/modules \
   -DINSTALL_C_EXAMPLES=OFF \
-  -DINSTALL_PYTHON_EXAMPLES=ON \
-  -DBUILD_EXAMPLES=ON \
+  -DINSTALL_PYTHON_EXAMPLES=OFF \
+  -DCUDA_ARCH_BIN=75 \
+  -DBUILD_DOCS=OFF \
+  -DBUILD_TESTS=OFF \
   -DPYTHON_DEFAULT_EXECUTABLE=$(which python3) \
   -DPYTHON3_EXECUTABLE=$(which python3) \
   -DPYTHON_INCLUDE_DIR=$(python3 -c "from distutils.sysconfig import get_python_inc; print(get_python_inc())") \
@@ -15,6 +18,4 @@ cmake -DCMAKE_BUILD_TYPE=RELEASE \
   -DWITH_CUDA=ON \
   -DENABLE_FAST_MATH=1 \
   -DCUDA_FAST_MATH=1 \
-  -DWITH_CUBLAS=1 \
-  -DINSTALL_PYTHON_EXAMPLES=ON \
-  -DBUILD_EXAMPLES=ON  ..
+  -DWITH_CUBLAS=1 ..

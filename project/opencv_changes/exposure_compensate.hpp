@@ -50,6 +50,8 @@
 #include "opencv2/core.hpp"
 //------- jwootan cuda experiment ----------------------
 #include "opencv2/cudaarithm.hpp"
+#include <string>
+//------------------------------------------------------
 
 namespace cv {
 namespace detail {
@@ -87,6 +89,9 @@ public:
     @param mask Image mask
         */
     CV_WRAP virtual void apply(int index, Point corner, InputOutputArray image, InputArray mask) = 0;
+    // jwootan - Added runType as parameter to apply
+    CV_WRAP virtual void apply(int index, Point corner, InputOutputArray image, InputArray mask, std::string runType) = 0;
+    // ------------------------------------
     CV_WRAP virtual void getMatGains(CV_OUT std::vector<Mat>& ) {CV_Error(Error::StsInternal, "");};
     CV_WRAP virtual void setMatGains(std::vector<Mat>& ) { CV_Error(Error::StsInternal, ""); };
     CV_WRAP void setUpdateGain(bool b) { updateGain = b; };
@@ -103,6 +108,9 @@ public:
     void feed(const std::vector<Point> &/*corners*/, const std::vector<UMat> &/*images*/,
               const std::vector<std::pair<UMat,uchar> > &/*masks*/) CV_OVERRIDE { }
     CV_WRAP void apply(int /*index*/, Point /*corner*/, InputOutputArray /*image*/, InputArray /*mask*/) CV_OVERRIDE { }
+    // jwootan - Added runType as parameter
+    CV_WRAP void apply(int index, Point corner, InputOutputArray image, InputArray mask, std::string runType) CV_OVERRIDE {}
+    // -------------------------------------
     CV_WRAP void getMatGains(CV_OUT std::vector<Mat>& umv) CV_OVERRIDE { umv.clear(); return; };
     CV_WRAP void setMatGains(std::vector<Mat>& umv) CV_OVERRIDE { umv.clear(); return; };
 };
@@ -123,6 +131,9 @@ public:
     void singleFeed(const std::vector<Point> &corners, const std::vector<UMat> &images,
                     const std::vector<std::pair<UMat,uchar> > &masks);
     CV_WRAP void apply(int index, Point corner, InputOutputArray image, InputArray mask) CV_OVERRIDE;
+    // jwootan - Added runType as parameter
+    CV_WRAP void apply(int index, Point corner, InputOutputArray image, InputArray mask, std::string runType) CV_OVERRIDE {}
+    // ------------------------------------
     CV_WRAP void getMatGains(CV_OUT std::vector<Mat>& umv) CV_OVERRIDE ;
     CV_WRAP void setMatGains(std::vector<Mat>& umv) CV_OVERRIDE ;
     CV_WRAP void setNrFeeds(int nr_feeds) { nr_feeds_ = nr_feeds; }
@@ -152,6 +163,9 @@ public:
     void feed(const std::vector<Point> &corners, const std::vector<UMat> &images,
               const std::vector<std::pair<UMat,uchar> > &masks) CV_OVERRIDE;
     CV_WRAP void apply(int index, Point corner, InputOutputArray image, InputArray mask) CV_OVERRIDE;
+    // jwootan - Added runType as parameter
+    CV_WRAP void apply(int index, Point corner, InputOutputArray image, InputArray mask, std::string runType) CV_OVERRIDE {};
+    // --------------------------------------
     CV_WRAP void getMatGains(CV_OUT std::vector<Mat>& umv) CV_OVERRIDE;
     CV_WRAP void setMatGains(std::vector<Mat>& umv) CV_OVERRIDE;
     CV_WRAP void setNrFeeds(int nr_feeds) { nr_feeds_ = nr_feeds; }
@@ -174,7 +188,10 @@ public:
     BlocksCompensator(int bl_width=32, int bl_height=32, int nr_feeds=1)
             : bl_width_(bl_width), bl_height_(bl_height), nr_feeds_(nr_feeds), nr_gain_filtering_iterations_(2),
               similarity_threshold_(1) {}
-    CV_WRAP void apply(int index, Point corner, InputOutputArray image, InputArray mask) CV_OVERRIDE;
+    // jwootan - Added runType as parameter and provided empty definition to original function
+    CV_WRAP void apply(int index, Point corner, InputOutputArray image, InputArray mask) CV_OVERRIDE {};
+    CV_WRAP void apply(int index, Point corner, InputOutputArray image, InputArray mask, std::string runType) CV_OVERRIDE;
+    // -----------------------------------------
     CV_WRAP void getMatGains(CV_OUT std::vector<Mat>& umv) CV_OVERRIDE;
     CV_WRAP void setMatGains(std::vector<Mat>& umv) CV_OVERRIDE;
     CV_WRAP void setNrFeeds(int nr_feeds) { nr_feeds_ = nr_feeds; }
@@ -220,7 +237,13 @@ public:
 
     // This function only exists to make source level compatibility detector happy
     CV_WRAP void apply(int index, Point corner, InputOutputArray image, InputArray mask) CV_OVERRIDE {
-        BlocksCompensator::apply(index, corner, image, mask); }
+        // jwootan - Use default non GPU accelerated version of the algorithm
+        BlocksCompensator::apply(index, corner, image, mask, "cpu");
+        //--------------------------------------------------------------
+    }
+    // jwootan - Added runType as parameter
+    CV_WRAP void apply(int index, Point corner, InputOutputArray image, InputArray mask, std::string runType) CV_OVERRIDE {};
+    //--------------------------------------
     // This function only exists to make source level compatibility detector happy
     CV_WRAP void getMatGains(CV_OUT std::vector<Mat>& umv) CV_OVERRIDE { BlocksCompensator::getMatGains(umv); }
     // This function only exists to make source level compatibility detector happy
