@@ -63,17 +63,24 @@ int main (int argc, char* argv[])
 
     cv::Mat pano;
     cv::Ptr<cv::Stitcher> stitcher = cv::Stitcher::create(cv::Stitcher::PANORAMA, cudaWarp, cudaConvolve);
-
+    int errorCount = 0;
     for(int i = 0; i < test_runs; i++){
         try{
             clock_t time = clock();
             cv::Stitcher::Status status = stitcher->stitch(input, pano, runType);
             time = clock() - time;
             float timeSec = ((float) time) / CLOCKS_PER_SEC;
-            std::cout << "\r Run " << i+1 << std::flush;
+            std::cout << "\rRun " << i+1 << std::flush;
             total += timeSec;
+            errorCount = 0;
         } catch(const std::exception& e){
             i--; 
+            errorCount++;
+        }
+
+        if(errorCount == 5){
+            std::cout << "Unexpected Exception" << std::endl;
+            return EXIT_FAILURE;
         }
     }
 
