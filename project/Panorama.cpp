@@ -7,39 +7,64 @@
 #include <opencv2/core/utils/logger.hpp>
 #include <time.h>
 #include <string>
-
-#define TEST_RUNS 200
+#include <dirent.h>
 
 int main (int argc, char* argv[])
 {
+    /*
+        command line arguments
+        Panorama cpu|cvgpu|cublas|global|register|shared  #_of_runs image_dir  (--cudawarp optional) (--cudaconvolve optional)
 
-    cv::Mat img1 = cv::imread("images/img1.jpg");
-    cv::Mat img2 = cv::imread("images/img2.jpg");
-    cv::Mat img3 = cv::imread("images/img3.jpg");
-
-    std::vector<cv::Mat> input{ img1,img2,img3};
-
-    cv::Mat pano;
-    cv::Ptr<cv::Stitcher> stitcher = cv::Stitcher::create();
+        ex. 100 runs with global multiplipication kernel and cuda warp enabled w/ images located in the local "images" directory
+        Panorama global 100 ./images --cudawarp
+    */
 
     float total = 0;
 
     std::string runType = "cpu";
+    int test_runs = 1;
+    bool cudaConvolve = false;
+    bool cudaWarp = false;
+    const char* imgDirPath;
 
-    /*
-        Valid runtime flags
-
-        cpu:
-        cvgpu:
-        cublas:
-        global:
-        register:
-    */
-    if(argc > 1){
+    if(argc >= 4){
         runType = argv[1];
+        test_runs = atoi(argv[2]);
+        imgDirPath = argv[3];
+    } else {
+        std::cout << "Please provide runtime arguments in the following format:" << std::endl;
+        std::cout << "Panorama cpu|cvgpu|cublas|global|register|shared  #_of_runs image_dir (--cudawarp optional) (--cudaconvolve optional)" << std::endl;
+        return 0;
     }
 
-    for(int i = 0; i < TEST_RUNS; i++){
+    for(int i = 0; i < argc; i++){
+        if(std::string(argv[i]) == "--cudawarp"){
+            cudaWarp = true;
+        } else if (std::string(argv[i]) == "--cudaconvolve"){
+            cudaConvolve = true;
+        }
+    }
+
+    std::vector<cv::Mat> input;
+
+    DIR *dr;
+    struct dirent *en;
+    dr = opendir(imgDirPath);
+    if (dr) {
+        while ((en = readdir(dr)) != NULL) {
+            std::string fileName = std::string(en->d_name);
+            if(fileName != "out.jpg" && fileName != "." && fileName != ".."){
+                std::string filePath = imgDirPath + std::string("/") + fileName;
+                input.push_back(cv::imread(filePath));
+            }
+        }
+        closedir(dr);
+    }
+
+    cv::Mat pano;
+    cv::Ptr<cv::Stitcher> stitcher = cv::Stitcher::create(cv::Stitcher::PANORAMA, cudaWarp, cudaConvolve);
+
+    for(int i = 0; i < test_runs; i++){
         try{
             clock_t time = clock();
             cv::Stitcher::Status status = stitcher->stitch(input, pano, runType);
@@ -52,9 +77,9 @@ int main (int argc, char* argv[])
         }
     }
 
-    std::cout << "\nAverage Runtime: " << total/TEST_RUNS << std::endl;
+    std::cout << "\nAverage Runtime: " << total/test_runs << std::endl;
 
-    cv::imwrite("images/out.jpg", pano);
+    cv::imwrite(imgDirPath + std::string("/out.jpg"), pano);
 
     return EXIT_SUCCESS;
 }

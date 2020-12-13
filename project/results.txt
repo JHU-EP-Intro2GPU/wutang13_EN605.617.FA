@@ -1,15 +1,31 @@
 Cpu only
- Run 200
-Average Runtime: 2.76942
+ Run 500
+Average Runtime: 2.95669
 
 Naive Global Kernel
- Run 200
-Average Runtime: 2.81547
+ Run 500
+Average Runtime: 3.24293
 
 Naive Register Kernel
- Run 200
-Average Runtime: 2.74495
+ Run 500
+Average Runtime: 3.24895
+
+Optimized Shared Kernel
+ Run 500
+Average Runtime: 3.10476
+
+CUBLAS Matrix Multiplication
+ Run 500
+Average Runtime: 3.13281
 
 Opencv Builtin Kernel
- Run 200
-Average Runtime: 2.75059
+ Run 500
+Average Runtime: 3.28678
+
+Cpu Multiplication CUDA Warping
+ Run 500
+Average Runtime: 1.63719
+
+Cpu Multiplication CUDA Convolution
+ Run 500
+Average Runtime: 2.22964
